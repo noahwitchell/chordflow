@@ -53,7 +53,7 @@ FIT = f'translate({tx:.2f} {ty:.2f}) scale({k:.4f})'
 # straight diagonal rainbow: C red at the flag's top right, through the 12 note colors,
 # to B rose at the head's bottom left
 # ends of the gradient = the note's own extremes along that diagonal, so every colour lands on it
-ux, uy = (gx0 - gx1), (gy1 - gy0); n = math.hypot(ux, uy); ux, uy = ux / n, uy / n
+ux, uy = -1.0, 0.55; n = math.hypot(ux, uy); ux, uy = ux / n, uy / n  # leans right→left, so the flag (furthest right) is the red-orange end
 th = math.radians(HROT)
 pts = [(HX + HRX * math.cos(t) * math.cos(th) - HRY * math.sin(t) * math.sin(th),
         HY + HRX * math.cos(t) * math.sin(th) + HRY * math.sin(t) * math.cos(th))
