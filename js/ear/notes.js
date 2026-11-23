@@ -116,27 +116,30 @@ function controls() {
   const o = data.opts;
   el.querySelector('.ear-controls').innerHTML = `
     <div class="row">${seg('pool', [['adaptive', 'Grow (adaptive)'], ['naturals', 'White keys'], ['chromatic', 'All 12']], o.pool)}</div>
-    <details class="more"><summary>Options</summary>
-      <div class="row">${seg('range', [['4', 'Octave 4'], ['3-5', '3–5'], ['2-6', '2–6']], o.range)}</div>
-      <div class="row">${seg('timbre', [['guitar', 'Guitar'], ['piano', 'Piano'], ['sine', 'Pure'], ['mix', 'Mix']], o.timbre)}</div>
-      <div class="row">${seg('noise', [['true', 'Noise between notes'], ['false', 'No noise']], o.noise)}</div>
-      <div class="row"><button class="btn ghost small" data-act="hearall">Hear all my notes in a row</button></div>
-      <p class="dim small"><b>Ref C</b> plays a C so you can work it out by interval. Answers after a Ref C still count in your stats but not toward unlocking the next note (that's for pure memory).</p>
-      <p class="dim small">Noise wipes the last note from memory so you name each one on its own, not relative to the previous. The screen stays dark until you find the note; a miss lets you try again, but only your first guess is scored.</p>
-    </details>
+    <div class="row">${seg('range', [['4', 'Octave 4'], ['3-5', 'Octaves 3–5'], ['2-6', 'Octaves 2–6']], o.range)}</div>
     <div class="row">
       <button class="btn primary" data-act="new">▶ New note</button>
       <button class="btn" data-act="again">↻ Again</button>
       <button class="btn" data-act="refc">Ref C</button>
       <button class="btn ghost" data-act="giveup">Show answer</button>
     </div>`;
+  // the rarely-changed options live at the bottom, under the ring
+  const open = el.querySelector('.ear-more details')?.open;
+  el.querySelector('.ear-more').innerHTML = `
+    <details class="more" ${open ? 'open' : ''}><summary>Options</summary>
+      <div class="row">${seg('timbre', [['guitar', 'Guitar'], ['piano', 'Piano'], ['sine', 'Pure'], ['mix', 'Mix']], o.timbre)}</div>
+      <div class="row">${seg('noise', [['true', 'Noise between notes'], ['false', 'No noise']], o.noise)}</div>
+      <div class="row"><button class="btn ghost small" data-act="hearall">Hear all my notes in a row</button></div>
+      <p class="dim small"><b>Ref C</b> plays a C so you can work it out by interval. Answers after a Ref C still count in your stats but not toward unlocking the next note (that's for pure memory).</p>
+      <p class="dim small">Noise wipes the last note from memory so you name each one on its own, not relative to the previous. The screen stays dark until you find the note; a miss lets you try again, but only your first guess is scored.</p>
+    </details>`;
 }
 
 export default {
   id: 'notes', label: 'Notes',
   mount(root) {
     el = root;
-    el.innerHTML = `<div class="ear-controls"></div><div class="ring-slot ear-ring-wrap"></div><div class="ear-fb">Tap ▶ New note. Answer fast: real pitch memory is instant.</div>`;
+    el.innerHTML = `<div class="ear-controls"></div><div class="ring-slot ear-ring-wrap"></div><div class="ear-fb">Tap ▶ New note. Answer fast: real pitch memory is instant.</div><div class="ear-more"></div>`;
     el.addEventListener('click', e => {
       const b = e.target.closest('.ear-btn'); if (b) return guess(+b.dataset.k);
       const sc = e.target.closest('.seg-ctl[data-name] button');
@@ -144,7 +147,6 @@ export default {
         const name = sc.closest('.seg-ctl').dataset.name, v = sc.dataset.v;
         data.opts[name] = v === 'true' ? true : v === 'false' ? false : v;
         save(); mystery = null; controls(); paint();
-        if (name === 'pool' || name === 'range') el.querySelector('details.more')?.setAttribute('open', '');
         return;
       }
       const act = e.target.closest('[data-act]')?.dataset.act;

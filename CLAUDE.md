@@ -5,7 +5,7 @@
 - No build step, no frameworks, no npm deps. ES modules served statically.
 - Dev server: `.claude/launch.json` in ~/Claude has `fretflow` (python http.server 5181).
 - Keep the chromatic colour map (C red … B rose) as the default: Noah trains associations on it.
-- Each tab is an interface experiment; Noah is still choosing which ideas to keep.
+- Tabs now: Clock, Grid, Ear (Wheel + Moves removed 2026-11-23, Noah only used three; they are in git history).
 - Verify in the browser preview at phone size (375×812) and desktop before handing back.
 - Commit after each meaningful change. Repo is PUBLIC (github.com/noahwitchell/fretflow) and served by
   GitHub Pages from main at https://noahwitchell.github.io/fretflow/ : pushing main = deploying. Bump

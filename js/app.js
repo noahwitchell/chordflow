@@ -4,15 +4,11 @@ import * as A from './audio.js';
 import * as C from './color.js';
 import { selectChord, playChord, addToProg, removeFromProg, clearProg, playProg, stopProg, isPlaying, playMidi } from './actions.js';
 import clock from './views/clock.js';
-import wheel from './views/wheel.js';
-import moves from './views/moves.js';
 import grid from './views/grid.js';
 import ear from './views/ear.js';
 
 const VIEWS = [
   { v: clock, label: 'Clock' },
-  { v: wheel, label: 'Wheel' },
-  { v: moves, label: 'Moves' },
   { v: grid, label: 'Grid' },
   { v: ear, label: 'Ear' },
 ];
@@ -56,7 +52,7 @@ function showView() {
   });
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === state.view));
   document.body.classList.toggle('ear-mode', state.view === 'ear');
-  document.body.classList.toggle('moves-mode', state.view === 'moves' || state.view === 'grid');
+  document.body.classList.toggle('grid-mode', state.view === 'grid');
   maybeHelp();
 }
 
@@ -67,18 +63,6 @@ const HELP = {
     <ol><li>Tap <b>Clear notes</b>.</li><li>Tap <b>C</b>, then <b>E</b>, then <b>G</b>. Each note plays alone; the shape grows; the name appears (C major).</li>
     <li>Tap the middle to hear them together.</li><li>Now tap <b>E</b> again to remove it and tap <b>D♯</b>: one note moved a half step and it's C minor.</li></ol>
     <p class="tip">The first note you tap is the root (the lowest note). Same notes from a different first note = a different name.</p>` },
-  wheel: { t: 'Wheel: keys and their chord families', b: `
-    <p>A <b>key</b> is a set of 7 notes that sound good together. The 7 chords built from those notes are the key's family. They're the lit wedge at the top, and the strip below the wheel.</p>
-    <ol><li>Tap the family chords below the wheel left to right. Watch which of the 7 notes light up: each chord uses every other note.</li>
-    <li>Try the pop progression: <b>I → V → vi → IV</b> (C, G, Am, F). Tap each, then <b>+ Add</b>, then ▶ at the bottom.</li>
-    <li><b>Drag the wheel</b> one click. A banner tells you exactly which single note changed: neighbouring keys differ by one note, which is why they sound related.</li></ol>
-    <p class="tip">Outside ring = major chords, middle = minor, centre = diminished. Gold outlines = chords sharing 2 notes with the one you tapped.</p>` },
-  moves: { t: 'Moves: how one chord leads to the next', b: `
-    <p>Chords feel related when they share notes. The chord buttons below never move; the ring shows what changes when you go from one to the next: the dashed shape is where you were, arrows show the notes that move.</p>
-    <ol><li>Tap <b>C</b>, then <b>Am</b>: C and E stay, G slides up to A.</li>
-    <li>Each button shows ● for every note it shares with where you are now, and which notes would move. Gold-edged buttons share 2 notes: smooth moves.</li>
-    <li>Your path builds at the top. Tap <b>Use as progression</b>, then ▶ at the bottom to play it.</li></ol>
-    <p class="tip">Top row = the key's 7 chords. Bottom row = popular chords "borrowed" from outside the key for extra colour (like the ♭VII in rock).</p>` },
   grid: { t: 'Grid: chords in any octave', b: `
     <p>Every note across four octaves: each row is one octave (low at the bottom), each column one note name. Unlike the Clock, here <b>which octave</b> a note is in matters.</p>
     <ol><li>Tap <b>C3, E3, G3</b>: C major in root position (C at the bottom).</li>
@@ -105,10 +89,8 @@ $('#help').addEventListener('click', e => { if (e.target.id === 'help' || e.targ
 function renderHeader() {
   $('#keyBtn').innerHTML = `<span class="kdot" style="background:${C.noteColor(state.key.tonic)}"></span>${T.keyName(state.key)} ▾`;
   $('#keyglow').style.background = C.keyGlow(T.scalePcs(state.key));
-  $('#sevBtn').classList.toggle('on', state.sevenths);
 }
 $('#keyBtn').addEventListener('click', () => { renderSheet(); $('#sheet').classList.remove('hidden'); });
-$('#sevBtn').addEventListener('click', () => set({ sevenths: !state.sevenths }));
 $('#sheet').addEventListener('click', e => {
   if (e.target.id === 'sheet' || e.target.closest('[data-close]')) return $('#sheet').classList.add('hidden');
   const b = e.target.closest('[data-set]');
