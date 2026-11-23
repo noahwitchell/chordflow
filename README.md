@@ -1,6 +1,6 @@
 # ChordFlow
 
-**Open on your phone: https://noahwitchell.github.io/fretflow/**
+**Open on your phone: https://noahwitchell.github.io/chordflow/**
 iPhone: Safari → Share → *Add to Home Screen*. Android: Chrome → ⋮ → *Install app*.
 
 A companion for hearing and seeing harmony: how chords are built, how they move, and
