@@ -1,5 +1,5 @@
 """Builds icons/icon.svg: an eighth note filled with the app's color wheel (the 12 note
-colors swept around its centre, C red at the top), on a black button.
+colors in a straight diagonal rainbow, C red at the top right), on a black button.
 Run: python3 tools/make_icon.py  (then tools/render_icons.sh for the PNGs)"""
 import math, colorsys
 
@@ -50,21 +50,24 @@ SIZE = 0.66 * 512
 k = SIZE / (gy1 - gy0)
 tx, ty = 256 - k * (gx0 + gx1) / 2, 256 - k * (gy0 + gy1) / 2
 FIT = f'translate({tx:.2f} {ty:.2f}) scale({k:.4f})'
-CX, CY = tx + k * (xr + 46), ty + k * (yt + 252)   # colour sweep centre: the hollow under the flag
-
-def pt(a_deg, r):
-    th = math.radians(a_deg)
-    return CX + r * math.sin(th), CY - r * math.cos(th)
-
-
-wedges = []
-N = 720
-for i in range(N):
-    a0, a1 = i * 360 / N, (i + 2.5) * 360 / N
-    h, s = hue_at((a0 + a1) / 2)
-    x0, y0 = pt(a0, 400); x1, y1 = pt(a1, 400)
-    wedges.append(f'<path d="M{CX} {CY} L{x0:.2f} {y0:.2f} L{x1:.2f} {y1:.2f}Z" fill="{hsl(h, s, 56)}"/>')
-wedges = ''.join(wedges)
+# straight diagonal rainbow: C red at the flag's top right, through the 12 note colors,
+# to B rose at the head's bottom left
+# ends of the gradient = the note's own extremes along that diagonal, so every colour lands on it
+ux, uy = (gx0 - gx1), (gy1 - gy0); n = math.hypot(ux, uy); ux, uy = ux / n, uy / n
+th = math.radians(HROT)
+pts = [(HX + HRX * math.cos(t) * math.cos(th) - HRY * math.sin(t) * math.sin(th),
+        HY + HRX * math.cos(t) * math.sin(th) + HRY * math.sin(t) * math.cos(th))
+       for t in [i * math.pi / 180 for i in range(360)]]
+pts += [(xl, yt), (xr, yt), (xr + 112, yt + 196), (xr + 108, yt + 150), (xr + 60, yt + 90), (xr + 78, yt + 294)]
+proj = [x * ux + y * uy for x, y in pts]
+p0, p1 = min(proj), max(proj)
+mx, my = (gx0 + gx1) / 2, (gy0 + gy1) / 2; mp = mx * ux + my * uy
+X0, Y0 = tx + k * (mx + (p0 - mp) * ux), ty + k * (my + (p0 - mp) * uy)
+X1, Y1 = tx + k * (mx + (p1 - mp) * ux), ty + k * (my + (p1 - mp) * uy)
+stops = ''.join(f'<stop offset="{i / 11:.4f}" stop-color="{hsl(HUES[i], SATS[i], 56)}"/>' for i in range(12))
+RAIN = (f'<linearGradient id="rain" gradientUnits="userSpaceOnUse" x1="{X0:.1f}" y1="{Y0:.1f}" '
+        f'x2="{X1:.1f}" y2="{Y1:.1f}">{stops}</linearGradient>')
+FILL = '<rect width="512" height="512" fill="url(#rain)"/>'
 
 SHAPE = f'<g transform="{FIT}">{HEAD}<path d="{STEMFLAG}"/></g>'
 
@@ -72,14 +75,14 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <mask id="note"><g fill="#fff">{SHAPE}</g></mask>
     <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="24"/></filter>
-    <filter id="smooth"><feGaussianBlur stdDeviation="1.2"/></filter>
+    {RAIN}
     <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#fff" stop-opacity="0.32"/><stop offset="0.55" stop-color="#fff" stop-opacity="0"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" fill="#000"/>
-  <g mask="url(#note)" filter="url(#soft)" opacity="0.5">{wedges}</g>
-  <g mask="url(#note)"><g filter="url(#smooth)">{wedges}</g><rect width="512" height="512" fill="url(#sheen)"/></g>
+  <g mask="url(#note)" filter="url(#soft)" opacity="0.5">{FILL}</g>
+  <g mask="url(#note)">{FILL}<rect width="512" height="512" fill="url(#sheen)"/></g>
 </svg>
 '''
 open('icons/icon.svg', 'w').write(svg)
