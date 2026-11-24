@@ -61,7 +61,7 @@ export function revive() {
   }, 250);
 }
 
-export const TIMBRES = ['guitar', 'piano', 'sine'];
+export const TIMBRES = ['guitar', 'piano', 'sine', 'pipe'];
 
 // Pitch balance: a gentle tilt in dB per octave around middle C. Negative favours low notes
 // (quiet on small speakers and at low volume), positive favours high ones. Applies everywhere.
@@ -75,6 +75,11 @@ export function playNote(midi, { at = 0, dur = 2.2, vel = 0.6, notify = true, so
   const f = midiFreq(midi);
   vel *= balanceGain(midi);
   if (timbre === 'mix') timbre = TIMBRES[Math.floor(Math.random() * TIMBRES.length)];
+  if (timbre === 'pipe') {
+    playPipe(c, f, t, dur, vel);
+    if (notify) setTimeout(() => noteListeners.forEach(fn => fn(midi, source)), Math.max(0, at * 1000));
+    return;
+  }
   if (timbre !== 'guitar') {
     playSimple(c, f, t, dur, vel, timbre);
     if (notify) setTimeout(() => noteListeners.forEach(fn => fn(midi, source)), Math.max(0, at * 1000));
@@ -142,6 +147,43 @@ function playSimple(c, f, t, dur, vel, timbre) {
   env.connect(out); env.connect(wet);
   const v = { env, end: t + dur }; voices.add(v);
   setTimeout(() => voices.delete(v), (dur + 0.2) * 1000);
+}
+
+// Pitch pipe: a free reed. Two slightly detuned saws + a square (reedy beating), a nasal
+// resonance, a breathy puff at the start and a small pitch scoop up into the note, then a flat
+// steady sustain until it's let go.
+function playPipe(c, f, t, dur, vel) {
+  const sum = c.createGain();
+  const oscs = [['sawtooth', -3, 0.5], ['sawtooth', 4, 0.5], ['square', 0, 0.25]].map(([type, det, lv]) => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = f; g.gain.value = lv;
+    o.detune.setValueAtTime(det - 25, t); o.detune.linearRampToValueAtTime(det, t + 0.08);
+    o.connect(g); g.connect(sum); o.start(t); o.stop(t + dur + 0.1); return o;
+  });
+  const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = Math.max(60, f * 0.7);
+  const nasal = c.createBiquadFilter(); nasal.type = 'peaking'; nasal.frequency.value = 1800; nasal.Q.value = 1.4; nasal.gain.value = 7;
+  const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.5; lp.frequency.value = Math.min(7000, Math.max(2500, f * 9));
+  sum.connect(hp); hp.connect(nasal); nasal.connect(lp);
+
+  const env = c.createGain(), amp = vel * 0.12, rel = Math.min(0.18, dur * 0.2);
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(amp * 1.15, t + 0.05);
+  env.gain.exponentialRampToValueAtTime(amp, t + 0.14);
+  env.gain.setValueAtTime(amp, t + dur - rel);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  lp.connect(env); env.connect(out); env.connect(wet);
+
+  // breath: a short band of noise as the air starts
+  const len = 0.12, buf = c.createBuffer(1, Math.floor(c.sampleRate * len), c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const n = c.createBufferSource(); n.buffer = buf;
+  const nb = c.createBiquadFilter(); nb.type = 'bandpass'; nb.frequency.value = 2500; nb.Q.value = 0.8;
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(amp * 0.5, t + 0.02); ng.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  n.connect(nb); nb.connect(ng); ng.connect(out); n.start(t);
+
+  const v = { env, end: t + dur }; voices.add(v);
+  oscs[0].onended = () => voices.delete(v);
 }
 
 // A short burst of noise + a random cluster: wipes short-term pitch memory between quiz notes,

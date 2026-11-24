@@ -34,7 +34,7 @@ function newNote() {
     pc = pl[Math.floor(Math.random() * pl.length)];
     oct = lo + Math.floor(Math.random() * (hi - lo + 1));
   } while (pl.length > 1 && last && pc === last.pc && guard++ < 20);
-  const timbre = data.opts.timbre === 'mix' ? A.TIMBRES[Math.floor(Math.random() * 3)] : data.opts.timbre;
+  const timbre = data.opts.timbre === 'mix' ? A.TIMBRES[Math.floor(Math.random() * A.TIMBRES.length)] : data.opts.timbre;
   mystery = { pc, midi: (oct + 1) * 12 + pc, timbre };
   answered = false; misses = []; usedRef = false;
   const delay = data.opts.noise && last ? A.scramble(0.7) + 0.35 : 0;
@@ -135,7 +135,7 @@ function controls() {
   const open = el.querySelector('.ear-more details')?.open;
   el.querySelector('.ear-more').innerHTML = `
     <details class="more" ${open ? 'open' : ''}><summary>Options</summary>
-      <div class="row">${seg('timbre', [['guitar', 'Guitar'], ['piano', 'Piano'], ['sine', 'Pure'], ['mix', 'Mix']], o.timbre)}</div>
+      <div class="row">${seg('timbre', [['guitar', 'Guitar'], ['piano', 'Piano'], ['sine', 'Pure'], ['pipe', 'Pipe'], ['mix', 'Mix']], o.timbre)}</div>
       <div class="row">${seg('noise', [['true', 'Noise between notes'], ['false', 'No noise']], o.noise)}</div>
       <div class="bal">
         <div class="bal-h">Low / high balance <span class="dim">(whole app)</span></div>
