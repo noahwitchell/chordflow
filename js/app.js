@@ -16,6 +16,7 @@ const $ = s => document.querySelector(s);
 if (!VIEWS.some(x => x.v.id === state.view)) state.view = 'clock';
 
 C.setColorMap(state.colorMap);
+A.setBalance?.(state.balance);
 
 // ---- colour wash -----------------------------------------------------------
 A.onNote((midi, source) => {
@@ -61,7 +62,7 @@ const HELP = {
   clock: { t: 'Clock: build a chord', b: `
     <p>The 12 notes in a circle. A chord is just a few of them played together.</p>
     <ol><li>Tap <b>Clear notes</b>.</li><li>Tap <b>C</b>, then <b>E</b>, then <b>G</b>. Each note plays alone; the shape grows; the name appears (C major).</li>
-    <li>Tap the middle to hear them together.</li><li>Now tap <b>E</b> again to remove it and tap <b>D♯</b>: one note moved a half step and it's C minor.</li></ol>
+    <li>Tap the middle to hear them together.</li><li>Now <b>drag the E</b> one spot over onto <b>D♯</b>: one note moved a half step and it's C minor. Drag any chosen note to try its neighbours.</li></ol>
     <p class="tip">The first note you tap is the root (the lowest note). Same notes from a different first note = a different name.</p>` },
   grid: { t: 'Grid: chords in any octave', b: `
     <p>Every note across four octaves: each row is one octave (low at the bottom), each column one note name. Unlike the Clock, here <b>which octave</b> a note is in matters.</p>
@@ -189,6 +190,7 @@ on('playhead', i => { playheadIdx = i; renderTray(); });
 // ---- wiring ---------------------------------------------------------------------
 function renderAll() { renderHeader(); renderInspector(); renderTray(); showView(); }
 on('change', patch => {
+  if ('balance' in patch) A.setBalance?.(patch.balance);
   if ('view' in patch) return showView();
   if ('ear' in patch) return;
   renderAll();

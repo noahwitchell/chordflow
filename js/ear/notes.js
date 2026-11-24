@@ -6,6 +6,7 @@ import * as C from '../color.js';
 import * as A from '../audio.js';
 import { data, save, logNote, unlocked, levelProgress, UNLOCK_ORDER } from './log.js';
 import { ring, seg, pct, PLAIN } from './ui.js';
+import { state, set } from '../store.js';
 
 let el, usedRef = false, mystery = null, answered = false, misses = [], t0 = 0, streak = 0, sess = { n: 0, ok: 0 }, last = null, busy = false;
 const RANGES = { '4': [4, 4], '3-5': [3, 5], '2-6': [2, 6] };
@@ -112,6 +113,13 @@ function paint(correct = null, wrong = [], shown = null) {
   el.querySelector('.ring-slot').innerHTML = ring(items, center);
 }
 
+// The same note at five octaves: they should all sound about equally loud.
+function balTest() {
+  A.stopAll();
+  const timbre = data.opts.timbre === 'mix' ? 'guitar' : data.opts.timbre;
+  [36, 48, 60, 72, 84].forEach((m, i) => A.playNote(m, { at: i * 0.45, dur: 1.1, timbre, source: 'mystery' }));
+}
+
 function controls() {
   const o = data.opts;
   el.querySelector('.ear-controls').innerHTML = `
@@ -129,6 +137,11 @@ function controls() {
     <details class="more" ${open ? 'open' : ''}><summary>Options</summary>
       <div class="row">${seg('timbre', [['guitar', 'Guitar'], ['piano', 'Piano'], ['sine', 'Pure'], ['mix', 'Mix']], o.timbre)}</div>
       <div class="row">${seg('noise', [['true', 'Noise between notes'], ['false', 'No noise']], o.noise)}</div>
+      <div class="bal">
+        <div class="bal-h">Low / high balance <span class="dim">(whole app)</span></div>
+        <div class="bal-row"><span>Lows<br>louder</span><input type="range" data-bal min="-9" max="6" step="1" value="${state.balance ?? -3}"><span>Highs<br>louder</span></div>
+        <button class="btn ghost small" data-act="baltest">▶ Test: C2 to C6</button>
+      </div>
       <div class="row"><button class="btn ghost small" data-act="hearall">Hear all my notes in a row</button></div>
       <p class="dim small"><b>Ref C</b> plays a C so you can work it out by interval. Answers after a Ref C still count in your stats but not toward unlocking the next note (that's for pure memory).</p>
       <p class="dim small">Noise wipes the last note from memory so you name each one on its own, not relative to the previous. The screen stays dark until you find the note; a miss lets you try again, but only your first guess is scored.</p>
@@ -153,6 +166,7 @@ export default {
       if (act === 'new') newNote();
       if (act === 'again' && mystery && !busy) playMystery();
       if (act === 'giveup') giveUp();
+      if (act === 'baltest') balTest();
       if (act === 'refc' && !busy) {
         if (mystery && !answered && !misses.length) usedRef = true;
         A.stopAll();
@@ -161,6 +175,9 @@ export default {
       }
       if (act === 'hearall') pool().forEach((pc, i) => A.playNote(60 + pc, { at: i * 0.6, dur: 1, timbre: data.opts.timbre === 'mix' ? 'guitar' : data.opts.timbre }));
     });
+    // balance slider: live while dragging, play the test ladder when you let go
+    el.addEventListener('input', e => { if (e.target.matches('[data-bal]')) set({ balance: +e.target.value }); });
+    el.addEventListener('change', e => { if (e.target.matches('[data-bal]')) balTest(); });
     controls(); paint();
   },
   show() { controls(); paint(); },

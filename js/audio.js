@@ -63,10 +63,17 @@ export function revive() {
 
 export const TIMBRES = ['guitar', 'piano', 'sine'];
 
+// Pitch balance: a gentle tilt in dB per octave around middle C. Negative favours low notes
+// (quiet on small speakers and at low volume), positive favours high ones. Applies everywhere.
+let tilt = -3;
+export function setBalance(dbPerOct) { tilt = +dbPerOct || 0; }
+export const balanceGain = midi => Math.min(3, Math.max(0.3, Math.pow(10, (tilt * (midi - 60) / 12) / 20)));
+
 export function playNote(midi, { at = 0, dur = 2.2, vel = 0.6, notify = true, source = 'play', timbre = 'guitar' } = {}) {
   const c = audio();
   const t = c.currentTime + at + 0.01;
   const f = midiFreq(midi);
+  vel *= balanceGain(midi);
   if (timbre === 'mix') timbre = TIMBRES[Math.floor(Math.random() * TIMBRES.length)];
   if (timbre !== 'guitar') {
     playSimple(c, f, t, dur, vel, timbre);

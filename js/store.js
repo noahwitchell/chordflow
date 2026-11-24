@@ -11,6 +11,7 @@ const defaults = {
   colorMap: 'chromatic', // 'chromatic' | 'fifths'
   sevenths: false,
   tapSound: 'both',     // 'both' | 'arp' | 'strum'
+  balance: -3,          // dB per octave: negative = lows louder, positive = highs louder
   tempo: 90,
   loop: true,
   ear: { range: '4', pool: 'chromatic', blind: true, stats: {} },

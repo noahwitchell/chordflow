@@ -6,7 +6,7 @@ import { selectChord, playMidi } from '../actions.js';
 import * as A from '../audio.js';
 
 // Notes in the order you tapped them. The first one is the root (and the lowest note).
-let el, built = [], synced = '', inv = 0; // inv = inversion step: +1 moves the lowest note up an octave
+let el, built = [], synced = '', inv = 0, drag = null, justDragged = false; // inv = inversion step: +1 moves the lowest note up an octave
 const ck = c => `${c.root}:${c.type}`;
 
 // One fixed pitch per note: the root sits between G3 and F♯4 and every other note stacks
@@ -105,14 +105,14 @@ function render() {
     // under each chosen note: its interval from your root ("1" marks the root itself)
     const tag = inChord && state.labels !== 'degree' ? `<text class="rel" dy="17">${isRoot ? 'root' : rel}</text>` : '';
     const isBass = pcs.length > 1 && pc === bass;
-    notes += `<g class="cnode ${inChord ? 'on' : ''} ${inScale ? 'scale' : 'out'} ${isRoot ? 'root' : ''}" data-pc="${pc}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})">
+    notes += `<g class="cnode ${inChord ? 'on' : ''} ${drag && drag.moved && drag.cur === pc ? 'drag' : ''} ${inScale ? 'scale' : 'out'} ${isRoot ? 'root' : ''}" data-pc="${pc}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})">
       ${isBass ? '<circle r="31" class="bassring"/>' : ''}<circle r="${inChord ? 25 : 19}" fill="${C.noteColor(pc, 4, inChord ? 1 : inScale ? 0.38 : 0.14)}"/>
       <text dy="${tag ? 2 : 5}">${label}</text>${tag}</g>`;
   }
 
   el.querySelector('.hint').innerHTML = C.getMap() === 'fifths'
     ? 'Notes in circle-of-fifths order (= the colour wheel). Tap notes to build a chord; neighbours are a 5th apart, so close colours = consonant notes. Numbers = steps of a 5th.'
-    : 'Tap notes one at a time: the <b>first one is the root</b> (lowest note), each plays alone, and the chord is named from your root. Tap the middle to hear them together. Numbers = half-steps between notes.';
+    : 'Tap notes one at a time: the <b>first one is the root</b> (lowest note), each plays alone, and the chord is named from your root. Tap the middle to hear them together. <b>Drag</b> a chosen note to another spot to swap it. Numbers = half-steps between notes.';
   el.querySelector('.stage').innerHTML = `
     <svg viewBox="-200 -200 400 400" class="clock">
       ${hueRing()}
@@ -148,7 +148,48 @@ export default {
     el = root;
     el.innerHTML = `<div class="clock-tools"><button class="btn small" data-inv="-1" title="Highest note drops an octave">Invert ↓</button><button class="btn small" data-inv="1" title="Lowest note jumps up an octave">Invert ↑</button><span class="sp"></span><button class="btn small" data-clear>Clear notes</button></div><div class="stage"></div>
       <p class="hint"></p>`;
+    // drag a chosen note round the ring: each spot it passes plays, the shape follows,
+    // and letting go plays the new chord. A short touch without moving is still a tap.
+    const stage = el.querySelector('.stage');
+    stage.addEventListener('pointerdown', e => {
+      const g = e.target.closest('.cnode'); if (!g) return;
+      const pc = +g.dataset.pc; if (!built.includes(pc)) return;
+      drag = { from: pc, cur: pc, x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
+    });
+    stage.addEventListener('pointermove', e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.moved) {
+        if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 10) return;
+        drag.moved = true;
+        try { stage.setPointerCapture(e.pointerId); } catch {}
+      }
+      e.preventDefault();
+      const r = stage.querySelector('svg.clock').getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      if (Math.hypot(dx, dy) < r.width * 0.15) return; // over the middle: no spot
+      const s = Math.round(((Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360) / 30) % 12;
+      const pc = [...Array(12).keys()].find(p => C.wheelPos(p) === s);
+      if (pc === drag.cur || built.includes(pc)) return;
+      built = built.map(p => (p === drag.cur ? pc : p)); drag.cur = pc;
+      if (built.length > 1 && !inRange(voicing())) inv = 0;
+      A.stopAll(); playMidi(pitchOf(pc), { dur: 0.9, vel: 0.5 });
+      render();
+    });
+    const endDrag = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag; drag = null;
+      if (!d.moved) return;
+      justDragged = true; setTimeout(() => { justDragged = false; }, 400);
+      const nm = nameNotes(false);
+      if (nm) { synced = ck(nm.chord); selectChord(nm.chord, { play: false }); }
+      render();
+      if (d.cur !== d.from) hear(true);
+    };
+    stage.addEventListener('pointerup', endDrag);
+    stage.addEventListener('pointercancel', endDrag);
+
     el.addEventListener('click', e => {
+      if (justDragged) { justDragged = false; return; }
       if (e.target.closest('[data-clear]')) { built = []; inv = 0; render(); return; }
       const ib = e.target.closest('[data-inv]');
       if (ib) {
